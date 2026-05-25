@@ -1,0 +1,48 @@
+/* Hide seek bar visuals and spoiler-revealing time displays.
+   Scoped via the `tvsh-active` class toggled on <html> by content.js. */
+
+/* Twitch duration / total time label (e.g. "1:23:45" on the right of current time) */
+html.tvsh-active.tvsh-platform-twitch [data-a-target="player-seekbar-duration"],
+html.tvsh-active.tvsh-platform-twitch .vod-seekbar-time-labels__duration {
+  visibility: hidden !important;
+}
+
+/* Twitch seek bar visuals. Keep the container active so hover thumbnails still work. */
+html.tvsh-active.tvsh-platform-twitch .seekbar-bar,
+html.tvsh-active.tvsh-platform-twitch .seekbar-fill,
+html.tvsh-active.tvsh-platform-twitch .seekbar-progress,
+html.tvsh-active.tvsh-platform-twitch .seekbar-handle,
+html.tvsh-active.tvsh-platform-twitch .seekbar-thumb,
+html.tvsh-active.tvsh-platform-twitch
+  [data-a-target*="seekbar" i][data-a-target*="progress" i],
+html.tvsh-active.tvsh-platform-twitch
+  [data-a-target*="seekbar" i][data-a-target*="segment" i],
+html.tvsh-active.tvsh-platform-twitch [class*="seekbar" i][class*="fill" i],
+html.tvsh-active.tvsh-platform-twitch [class*="seekbar" i][class*="progress" i],
+html.tvsh-active.tvsh-platform-twitch [class*="seekbar" i][class*="handle" i],
+html.tvsh-active.tvsh-platform-twitch [class*="seekbar" i][class*="thumb" i],
+html.tvsh-active.tvsh-platform-twitch [class*="seekbar" i][class*="segment" i] {
+  opacity: 0 !important;
+}
+
+/* YouTube duration. The current playback time remains visible. */
+html.tvsh-active.tvsh-platform-youtube .ytp-time-duration {
+  visibility: hidden !important;
+}
+
+/* YouTube seek bar visuals. Keep the seekbar active for hover thumbnails/seeking. */
+html.tvsh-active.tvsh-platform-youtube .ytp-play-progress,
+html.tvsh-active.tvsh-platform-youtube .ytp-load-progress,
+html.tvsh-active.tvsh-platform-youtube .ytp-hover-progress,
+html.tvsh-active.tvsh-platform-youtube .ytp-scrubber-button,
+html.tvsh-active.tvsh-platform-youtube .ytp-chapter-hover-container,
+html.tvsh-active.tvsh-platform-youtube .ytp-progress-list {
+  opacity: 0 !important;
+}
+
+/* Timestamp text inside hover preview tooltips. The thumbnail stays visible. */
+html.tvsh-active [data-tvsh-hidden="hover-time"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}

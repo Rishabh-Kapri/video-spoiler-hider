@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Video Spoiler Hider</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        width: 240px;
+        padding: 12px 14px;
+        margin: 0;
+        background: #18181b;
+        color: #efeff1;
+      }
+      h1 {
+        font-size: 14px;
+        margin: 0 0 10px;
+      }
+      label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      p {
+        font-size: 11px;
+        color: #adadb8;
+        margin: 10px 0 0;
+        line-height: 1.4;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Video Spoiler Hider</h1>
+    <label>
+      <input type="checkbox" id="toggle" />
+      <span>Hide duration &amp; seek progress</span>
+    </label>
+    <p>
+      Applies to Twitch VODs and YouTube watch pages. Reload the tab if a video
+      was already open before changing this setting.
+    </p>
+    <script src="popup.js"></script>
+  </body>
+</html>
