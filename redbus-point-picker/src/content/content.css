@@ -1,0 +1,239 @@
+/* Namespaced hard to avoid colliding with redBus's own styles. */
+#rbpp-root,
+#rbpp-root * {
+  box-sizing: border-box;
+}
+
+#rbpp-root {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2147483000;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #14181f;
+}
+
+#rbpp-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 999px;
+  background: #d84e55;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.24);
+}
+
+#rbpp-toggle:hover {
+  background: #c5434a;
+}
+
+#rbpp-badge {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.25);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+#rbpp-panel {
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  max-height: min(70vh, 620px);
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid #e2e5ea;
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+  overflow: hidden;
+}
+
+#rbpp-panel[hidden] {
+  display: none;
+}
+
+.rbpp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #eef0f3;
+  background: #fafbfc;
+}
+
+.rbpp-title {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.rbpp-close {
+  border: none;
+  background: none;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 2px 4px;
+}
+
+.rbpp-body {
+  overflow-y: auto;
+  padding: 6px 0 10px;
+}
+
+.rbpp-note {
+  margin: 10px 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #7c2d12;
+  font-size: 12px;
+}
+
+.rbpp-note.rbpp-info {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e3a5f;
+}
+
+.rbpp-note button {
+  margin-top: 8px;
+  padding: 5px 10px;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.rbpp-section-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 12px 14px 6px;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.rbpp-pin {
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #9aa1ab;
+}
+
+.rbpp-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.rbpp-item {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 7px 14px;
+  border-bottom: 1px solid #f4f5f7;
+}
+
+.rbpp-item:hover {
+  background: #f9fafb;
+}
+
+.rbpp-rank {
+  flex: 0 0 18px;
+  color: #9aa1ab;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.rbpp-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.rbpp-name {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rbpp-sub {
+  display: block;
+  color: #9aa1ab;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rbpp-dist {
+  flex: 0 0 auto;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.rbpp-near .rbpp-dist { color: #15803d; }
+.rbpp-mid .rbpp-dist  { color: #a16207; }
+.rbpp-far .rbpp-dist  { color: #b91c1c; }
+.rbpp-unknown .rbpp-dist { color: #9aa1ab; font-weight: 500; }
+
+.rbpp-link {
+  flex: 0 0 auto;
+  color: #2563eb;
+  text-decoration: none;
+  font-size: 11px;
+}
+
+.rbpp-link:hover { text-decoration: underline; }
+
+.rbpp-flag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 10px;
+}
+
+.rbpp-foot {
+  padding: 8px 14px;
+  border-top: 1px solid #eef0f3;
+  color: #9aa1ab;
+  font-size: 11px;
+  background: #fafbfc;
+}
+
+@media (prefers-color-scheme: dark) {
+  #rbpp-panel {
+    background: #171a1f;
+    border-color: #2b3038;
+    color: #e6e8ec;
+  }
+  #rbpp-root { color: #e6e8ec; }
+  .rbpp-head, .rbpp-foot { background: #1d2127; border-color: #2b3038; }
+  .rbpp-item { border-color: #23272e; }
+  .rbpp-item:hover { background: #1d2127; }
+  .rbpp-flag { background: #262b33; color: #97a0ad; }
+  .rbpp-note.rbpp-info { background: #172033; border-color: #1e3a5f; color: #bfdbfe; }
+  .rbpp-note { background: #2a1f14; border-color: #7c4a1d; color: #fed7aa; }
+}

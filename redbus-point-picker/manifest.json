@@ -1,0 +1,52 @@
+{
+  "manifest_version": 3,
+  "name": "redBus Point Picker",
+  "version": "0.1.0",
+  "description": "Ranks redBus boarding and dropping points by real distance from two map pins you choose once.",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "permissions": ["storage"],
+  "host_permissions": ["*://*.redbus.in/*"],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "redbus-point-picker@local",
+      "strict_min_version": "128.0"
+    }
+  },
+  "action": {
+    "default_title": "redBus Point Picker",
+    "default_popup": "src/ui/popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.redbus.in/*"],
+      "js": ["src/content/interceptor.js"],
+      "run_at": "document_start",
+      "all_frames": false,
+      "world": "MAIN"
+    },
+    {
+      "matches": ["*://*.redbus.in/*"],
+      "js": [
+        "src/core/geo.js",
+        "src/core/adapter.js",
+        "src/core/ranking.js",
+        "src/shell/storage.js",
+        "src/content/content.js"
+      ],
+      "css": ["src/content/content.css"],
+      "run_at": "document_start",
+      "all_frames": false
+    }
+  ]
+}

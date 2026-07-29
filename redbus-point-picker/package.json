@@ -1,0 +1,13 @@
+{
+  "name": "redbus-point-picker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Ranks redBus boarding and dropping points by distance from two map pins.",
+  "scripts": {
+    "test": "node test/run.js",
+    "smoke": "node test/smoke.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.56.0"
+  }
+}

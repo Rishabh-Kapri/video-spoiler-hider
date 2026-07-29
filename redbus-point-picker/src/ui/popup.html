@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>redBus Point Picker</title>
+  <link rel="stylesheet" href="../../vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="head">
+    <h1>redBus Point Picker</h1>
+  </header>
+
+  <div class="slots">
+    <button class="slot" id="slot-origin" data-slot="origin" aria-pressed="true">
+      <span class="slot-label">Pickup</span>
+      <span class="slot-value" id="val-origin">not set</span>
+    </button>
+    <button class="slot" id="slot-destination" data-slot="destination" aria-pressed="false">
+      <span class="slot-label">Drop-off</span>
+      <span class="slot-value" id="val-destination">not set</span>
+    </button>
+  </div>
+
+  <p class="hint" id="hint">Tap the map to place your <strong>pickup</strong> pin. Drag a pin to fine-tune.</p>
+
+  <div id="map"></div>
+
+  <div class="row">
+    <input type="text" id="coord-input" placeholder="or paste 12.9716, 77.5946" aria-label="Paste coordinates">
+    <button id="coord-apply" class="btn">Set</button>
+  </div>
+
+  <details class="saved">
+    <summary>Saved locations</summary>
+    <div class="row">
+      <input type="text" id="save-label" placeholder="Label, e.g. Home" aria-label="Label for saved location">
+      <button id="save-current" class="btn">Save current</button>
+    </div>
+    <ul id="saved-list" class="saved-list"></ul>
+  </details>
+
+  <details class="recon">
+    <summary>Developer / recon</summary>
+    <label class="check">
+      <input type="checkbox" id="capture-mode">
+      Capture mode — store raw redBus payloads for schema inspection
+    </label>
+    <p class="micro" id="capture-count">No captures stored.</p>
+    <div class="row">
+      <button id="export" class="btn">Export captures</button>
+      <button id="clear" class="btn btn-quiet">Clear</button>
+    </div>
+  </details>
+
+  <script src="../../vendor/leaflet/leaflet.js"></script>
+  <script src="../core/geo.js"></script>
+  <script src="../shell/storage.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
