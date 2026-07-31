@@ -6,7 +6,10 @@
   'use strict';
 
   var geo = RB.geo;
+  var geocode = RB.geocode;
   var storage = RB.storage;
+
+  var SEARCH_DEBOUNCE_MS = 500;
 
   var INDIA_CENTER = [20.5937, 78.9629];
 
@@ -98,13 +101,14 @@
     $('val-destination').textContent = fmt(state.pins.destination);
     $('slot-origin').setAttribute('aria-pressed', String(state.activeSlot === 'origin'));
     $('slot-destination').setAttribute('aria-pressed', String(state.activeSlot === 'destination'));
-    $('hint').innerHTML = '';
+    var hint = $('hint');
+    hint.textContent = '';
     var label = state.activeSlot === 'origin' ? 'pickup' : 'drop-off';
-    $('hint').appendChild(document.createTextNode('Tap the map to place your '));
+    hint.appendChild(document.createTextNode('Searching or tapping the map sets your '));
     var strong = document.createElement('strong');
     strong.textContent = label;
-    $('hint').appendChild(strong);
-    $('hint').appendChild(document.createTextNode(' pin. Drag a pin to fine-tune.'));
+    hint.appendChild(strong);
+    hint.appendChild(document.createTextNode(' pin. Drag a pin to fine-tune.'));
   }
 
   function bindSlots() {
@@ -115,6 +119,141 @@
         var pin = state.pins[slot];
         if (pin) map.panTo([pin.lat, pin.lng]);
       });
+    });
+  }
+
+  // --- place search ----------------------------------------------------------
+
+  var searchCache = Object.create(null);
+  var searchTimer = null;
+  var searchSeq = 0;
+
+  function setSearchStatus(text) {
+    var node = $('search-status');
+    if (!text) {
+      node.hidden = true;
+      node.textContent = '';
+      return;
+    }
+    node.hidden = false;
+    node.textContent = text;
+  }
+
+  function renderSearchResults(results) {
+    var ul = $('search-results');
+    ul.textContent = '';
+    if (!results.length) {
+      ul.hidden = true;
+      return;
+    }
+    ul.hidden = false;
+    results.forEach(function (r) {
+      var li = document.createElement('li');
+      var btn = document.createElement('button');
+      btn.className = 'result';
+      btn.title = r.fullLabel;
+
+      var name = document.createElement('span');
+      name.className = 'result-name';
+      name.textContent = r.label;
+      btn.appendChild(name);
+
+      if (r.type) {
+        var type = document.createElement('span');
+        type.className = 'result-type';
+        type.textContent = r.type.replace(/_/g, ' ');
+        btn.appendChild(type);
+      }
+
+      btn.addEventListener('click', function () {
+        setPin(state.activeSlot, { lat: r.lat, lng: r.lng, label: r.label });
+        map.setView([r.lat, r.lng], 15);
+        $('search-results').hidden = true;
+        setSearchStatus(null);
+      });
+
+      li.appendChild(btn);
+      ul.appendChild(li);
+    });
+  }
+
+  function currentViewbox() {
+    if (!map) return null;
+    try {
+      var b = map.getBounds();
+      return [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function runSearch(query) {
+    if (!geocode.isQueryable(query)) {
+      renderSearchResults([]);
+      setSearchStatus(null);
+      return;
+    }
+    var q = query.trim();
+
+    // Bias by what's on screen, so the cache key must include it.
+    var viewbox = currentViewbox();
+    var cacheKey = q.toLowerCase() + '|' + (viewbox ? viewbox.map(function (n) { return n.toFixed(2); }).join(',') : '');
+
+    if (searchCache[cacheKey]) {
+      renderSearchResults(searchCache[cacheKey]);
+      setSearchStatus(searchCache[cacheKey].length ? null : 'No matches.');
+      return;
+    }
+
+    var seq = ++searchSeq;
+    setSearchStatus('Searching…');
+
+    fetch(geocode.buildSearchUrl(q, { viewbox: viewbox }), {
+      headers: { 'Accept': 'application/json' }
+    })
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function (json) {
+        if (seq !== searchSeq) return; // a newer query already superseded this
+        var results = geocode.parseResults(json);
+        searchCache[cacheKey] = results;
+        renderSearchResults(results);
+        setSearchStatus(results.length ? null : 'No matches.');
+      })
+      .catch(function (err) {
+        if (seq !== searchSeq) return;
+        renderSearchResults([]);
+        setSearchStatus('Search unavailable (' + (err && err.message ? err.message : 'network') + ').');
+      });
+  }
+
+  function bindSearch() {
+    var input = $('search-input');
+
+    // Debounced so a typed phrase costs roughly one request — Nominatim's usage
+    // policy allows interactive querying but not a request per keystroke.
+    input.addEventListener('input', function () {
+      clearTimeout(searchTimer);
+      var value = input.value;
+      if (!geocode.isQueryable(value)) {
+        renderSearchResults([]);
+        setSearchStatus(null);
+        return;
+      }
+      searchTimer = setTimeout(function () { runSearch(value); }, SEARCH_DEBOUNCE_MS);
+    });
+
+    input.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      clearTimeout(searchTimer);
+      runSearch(input.value);
+    });
+
+    $('search-go').addEventListener('click', function () {
+      clearTimeout(searchTimer);
+      runSearch(input.value);
     });
   }
 
@@ -218,6 +357,10 @@
       storage.setSettings({ captureMode: $('capture-mode').checked });
     });
 
+    $('debug-mode').addEventListener('change', function () {
+      storage.setSettings({ debug: $('debug-mode').checked });
+    });
+
     $('export').addEventListener('click', function () {
       storage.getCaptures().then(function (list) {
         var payload = {
@@ -248,6 +391,7 @@
   function boot() {
     initMap();
     bindSlots();
+    bindSearch();
     bindCoordInput();
     bindSave();
     bindRecon();
@@ -257,6 +401,7 @@
         state.pins = vals[0] || { origin: null, destination: null };
         state.saved = vals[1] || [];
         $('capture-mode').checked = !!(vals[2] && vals[2].captureMode);
+        $('debug-mode').checked = !!(vals[2] && vals[2].debug);
         syncMarker('origin');
         syncMarker('destination');
         fitToPins();

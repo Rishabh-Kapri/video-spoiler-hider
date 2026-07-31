@@ -323,6 +323,121 @@ test('missing pins degrade to a listing rather than throwing', function () {
   assert.strictEqual(ranked.boarding[0].distanceKm, null);
 });
 
+// --- journey identity --------------------------------------------------------
+
+group('journey');
+
+var journey = require('../src/core/journey.js');
+var SRP = 'https://www.redbus.in/bus-tickets/bangalore-to-hyderabad?fromCityName=Bangalore&onward=15-Aug-2026';
+
+test('switching redBus tabs keeps the same journey', function () {
+  // The reported bug: opening Board/Drop point wiped every captured point.
+  var seats = SRP + '&tab=seats';
+  var bpdp = SRP + '&tab=boardingDropping';
+  assert.strictEqual(journey.journeyKey(seats), journey.journeyKey(bpdp));
+  assert.strictEqual(journey.isNewJourney(seats, bpdp), false);
+});
+
+test('filters, sorts and tracking params do not reset state', function () {
+  var filtered = SRP + '&sort=departure&acFilter=true&utm_source=x';
+  assert.strictEqual(journey.journeyKey(SRP), journey.journeyKey(filtered));
+  assert.strictEqual(journey.isNewJourney(SRP, filtered), false);
+});
+
+test('a hash change does not reset state', function () {
+  assert.strictEqual(journey.isNewJourney(SRP, SRP + '#bus-4821'), false);
+});
+
+test('a different date is a new journey', function () {
+  var other = 'https://www.redbus.in/bus-tickets/bangalore-to-hyderabad?onward=16-Aug-2026';
+  assert.notStrictEqual(journey.journeyKey(SRP), journey.journeyKey(other));
+  assert.strictEqual(journey.isNewJourney(SRP, other), true);
+});
+
+test('a different city pair is a new journey', function () {
+  var other = 'https://www.redbus.in/bus-tickets/pune-to-goa?onward=15-Aug-2026';
+  assert.strictEqual(journey.isNewJourney(SRP, other), true);
+});
+
+test('multi-word city names are parsed', function () {
+  assert.ok(journey.hasCityPair('https://www.redbus.in/bus-tickets/new-delhi-to-jaipur'));
+  var key = journey.journeyKey('https://www.redbus.in/bus-tickets/new-delhi-to-jaipur');
+  assert.ok(key.indexOf('new-delhi>jaipur') === 0, key);
+});
+
+test('deeper paths still resolve to the same journey', function () {
+  var deep = 'https://www.redbus.in/bus-tickets/bangalore-to-hyderabad/seat-selection?onward=15-Aug-2026';
+  assert.strictEqual(journey.isNewJourney(SRP, deep), false);
+});
+
+test('a page with no city pair is a sub-page, not a new search', function () {
+  var checkout = 'https://www.redbus.in/booking/passenger-details';
+  assert.strictEqual(journey.hasCityPair(checkout), false);
+  assert.strictEqual(journey.isNewJourney(SRP, checkout), false);
+  assert.strictEqual(journey.isNewJourney(checkout, SRP), false);
+});
+
+test('malformed input does not throw', function () {
+  assert.strictEqual(typeof journey.journeyKey('not a url'), 'string');
+  assert.strictEqual(journey.hasCityPair(''), false);
+  assert.strictEqual(journey.isNewJourney('', ''), false);
+});
+
+// --- place search ------------------------------------------------------------
+
+group('geocode');
+
+var geocode = require('../src/core/geocode.js');
+
+test('builds a country-scoped search URL', function () {
+  var url = geocode.buildSearchUrl('koramangala bangalore');
+  assert.ok(url.indexOf('https://nominatim.openstreetmap.org/search?') === 0, url);
+  assert.ok(url.indexOf('q=koramangala%20bangalore') > -1, url);
+  assert.ok(url.indexOf('countrycodes=in') > -1, url);
+  assert.ok(url.indexOf('format=jsonv2') > -1, url);
+});
+
+test('biases by viewbox without restricting to it', function () {
+  var url = geocode.buildSearchUrl('madiwala', { viewbox: [77.4, 12.8, 77.8, 13.1] });
+  assert.ok(url.indexOf('viewbox=77.4,12.8,77.8,13.1') > -1, url);
+  assert.ok(url.indexOf('bounded=0') > -1, url);
+});
+
+test('escapes characters that would break the query', function () {
+  var url = geocode.buildSearchUrl('a&b=c d');
+  assert.ok(url.indexOf('a%26b%3Dc%20d') > -1, url);
+});
+
+test('parses Nominatim results into pins', function () {
+  var results = geocode.parseResults([
+    { lat: '12.9345', lon: '77.6266', display_name: 'Koramangala, Bengaluru, Karnataka, India', type: 'suburb' }
+  ]);
+  assert.strictEqual(results.length, 1);
+  assert.strictEqual(results[0].lat, 12.9345);
+  assert.strictEqual(results[0].lng, 77.6266);
+  assert.ok(results[0].label.indexOf('Koramangala') === 0);
+});
+
+test('drops results with unusable coordinates', function () {
+  var results = geocode.parseResults([
+    { lat: 'abc', lon: '77.6', display_name: 'Broken' },
+    { lat: '12.9', lon: '77.6', display_name: 'Fine' }
+  ]);
+  assert.strictEqual(results.length, 1);
+  assert.strictEqual(results[0].label, 'Fine');
+});
+
+test('tolerates a non-array response', function () {
+  assert.deepStrictEqual(geocode.parseResults(null), []);
+  assert.deepStrictEqual(geocode.parseResults({ error: 'nope' }), []);
+});
+
+test('short queries are not sent', function () {
+  assert.strictEqual(geocode.isQueryable('ko'), false);
+  assert.strictEqual(geocode.isQueryable('  '), false);
+  assert.strictEqual(geocode.isQueryable('kor'), true);
+});
+
 // --- summary -----------------------------------------------------------------
 
 console.log('\n' + passed + ' passed, ' + failed + ' failed');

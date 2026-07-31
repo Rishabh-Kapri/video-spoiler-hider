@@ -22,7 +22,14 @@
     </button>
   </div>
 
-  <p class="hint" id="hint">Tap the map to place your <strong>pickup</strong> pin. Drag a pin to fine-tune.</p>
+  <div class="row search-row">
+    <input type="search" id="search-input" placeholder="Search a place, e.g. Koramangala" aria-label="Search for a place" autocomplete="off">
+    <button id="search-go" class="btn">Find</button>
+  </div>
+  <ul id="search-results" class="search-results" hidden></ul>
+  <p class="micro search-status" id="search-status" hidden></p>
+
+  <p class="hint" id="hint">Or tap the map to place your <strong>pickup</strong> pin. Drag a pin to fine-tune.</p>
 
   <div id="map"></div>
 
@@ -43,6 +50,10 @@
   <details class="recon">
     <summary>Developer / recon</summary>
     <label class="check">
+      <input type="checkbox" id="debug-mode">
+      Debug logging — print capture activity to the redbus.in console
+    </label>
+    <label class="check">
       <input type="checkbox" id="capture-mode">
       Capture mode — store raw redBus payloads for schema inspection
     </label>
@@ -55,6 +66,7 @@
 
   <script src="../../vendor/leaflet/leaflet.js"></script>
   <script src="../core/geo.js"></script>
+  <script src="../core/geocode.js"></script>
   <script src="../shell/storage.js"></script>
   <script src="popup.js"></script>
 </body>

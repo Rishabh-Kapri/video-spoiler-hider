@@ -12,13 +12,20 @@
     pins: 'pins',
     saved: 'savedLocations',
     captures: 'captures',
-    settings: 'settings'
+    settings: 'settings',
+    points: 'pointsCache'
   };
 
   var MAX_CAPTURES = 5;
   var MAX_CAPTURE_BYTES = 400 * 1024;
 
-  var DEFAULT_SETTINGS = { captureMode: false, panelOpen: true };
+  // Points survive navigation within a journey. Cap both dimensions: a busy
+  // route can yield thousands of points and storage.local is only 10 MB.
+  var MAX_CACHED_JOURNEYS = 4;
+  var MAX_CACHED_POINTS = 800;
+  var POINTS_TTL_MS = 6 * 60 * 60 * 1000;
+
+  var DEFAULT_SETTINGS = { captureMode: false, panelOpen: true, debug: false };
 
   function get(key, fallback) {
     if (!area) return Promise.resolve(fallback);
@@ -91,6 +98,44 @@
     return set(KEYS.captures, []);
   }
 
+  /**
+   * Points cached per journey key, so switching between redBus's own tabs — or
+   * a full page load — doesn't throw away everything already captured.
+   */
+  function getCachedPoints(journeyKey) {
+    return get(KEYS.points, {}).then(function (cache) {
+      var entry = cache && cache[journeyKey];
+      if (!entry || !Array.isArray(entry.points)) return [];
+      if (Date.now() - (entry.ts || 0) > POINTS_TTL_MS) return [];
+      return entry.points;
+    });
+  }
+
+  function setCachedPoints(journeyKey, points) {
+    return get(KEYS.points, {}).then(function (cache) {
+      cache = cache || {};
+
+      // `raw` holds the entire original object per point — useful in memory for
+      // debugging, far too heavy to persist.
+      var slim = points.slice(0, MAX_CACHED_POINTS).map(function (p) {
+        return {
+          id: p.id, name: p.name, address: p.address, time: p.time,
+          kind: p.kind, coord: p.coord, path: p.path
+        };
+      });
+
+      cache[journeyKey] = { ts: Date.now(), points: slim };
+
+      var keys = Object.keys(cache).sort(function (a, b) {
+        return (cache[b].ts || 0) - (cache[a].ts || 0);
+      });
+      var pruned = {};
+      keys.slice(0, MAX_CACHED_JOURNEYS).forEach(function (k) { pruned[k] = cache[k]; });
+
+      return set(KEYS.points, pruned);
+    });
+  }
+
   root.RB = root.RB || {};
   root.RB.storage = {
     KEYS: KEYS,
@@ -102,6 +147,8 @@
     setSettings: setSettings,
     getCaptures: getCaptures,
     addCapture: addCapture,
-    clearCaptures: clearCaptures
+    clearCaptures: clearCaptures,
+    getCachedPoints: getCachedPoints,
+    setCachedPoints: setCachedPoints
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

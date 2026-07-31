@@ -211,3 +211,64 @@ details .row { padding-left: 0; padding-right: 0; }
 
 .rbpp-pin-origin { background: #2563eb; }
 .rbpp-pin-destination { background: #d84e55; }
+
+/* Place search */
+.search-row { padding-top: 4px; }
+
+input[type="search"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+}
+
+.search-results {
+  list-style: none;
+  margin: 6px 14px 0;
+  padding: 0;
+  max-height: 168px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.search-results[hidden] { display: none; }
+
+.search-results li + li { border-top: 1px solid var(--line); }
+
+.result {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.result:hover { background: var(--surface); }
+
+.result-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.result-type {
+  flex: 0 0 auto;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.search-status { margin: 6px 14px 0; }
+.search-status[hidden] { display: none; }

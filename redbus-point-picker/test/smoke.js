@@ -113,6 +113,20 @@ function check(name, cond, detail) {
   try {
     console.log('\nsmoke (extension id ' + extId + ')');
 
+    // Nominatim is a third party; stub it so the suite stays hermetic.
+    var geocodeRequests = [];
+    await context.route('**nominatim.openstreetmap.org**', function (route) {
+      geocodeRequests.push(route.request().url());
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          { lat: '12.9345', lon: '77.6266', display_name: 'Koramangala, Bengaluru, Karnataka, 560034, India', type: 'suburb' },
+          { lat: '12.9279', lon: '77.6271', display_name: 'Koramangala 5th Block, Bengaluru, Karnataka, India', type: 'neighbourhood' }
+        ])
+      });
+    });
+
     // 1. Set both pins through the popup UI.
     var popup = await context.newPage();
     await popup.goto('chrome-extension://' + extId + '/src/ui/popup.html');
@@ -130,11 +144,41 @@ function check(name, cond, detail) {
     check('pickup pin persists', /12\.92230/.test(originText), 'got: ' + originText);
     check('drop-off pin persists', /17\.49480/.test(destText), 'got: ' + destText);
 
+    // 1b. Place search — the reason you shouldn't have to hunt on the map.
+    await popup.click('#slot-origin');
+    await popup.fill('#search-input', 'koramangala');
+    await popup.click('#search-go');
+    await popup.waitForSelector('#search-results .result', { timeout: 10000 });
+
+    var resultCount = await popup.evaluate(function () {
+      return document.querySelectorAll('#search-results .result').length;
+    });
+    check('search renders results', resultCount === 2, 'got ' + resultCount);
+
+    check('search query is country-scoped and viewbox-biased',
+      geocodeRequests.length > 0 &&
+      /countrycodes=in/.test(geocodeRequests[0]) &&
+      /viewbox=/.test(geocodeRequests[0]),
+      geocodeRequests[0]);
+
+    await popup.click('#search-results .result');
+    await popup.waitForTimeout(400);
+    var afterSearch = await popup.textContent('#val-origin');
+    check('picking a result sets the pin with its label',
+      /Koramangala/.test(afterSearch) && /12\.93450/.test(afterSearch),
+      'got: ' + afterSearch);
+
+    // Restore the pin the ranking assertions below depend on.
+    await popup.fill('#coord-input', '12.9223, 77.6194');
+    await popup.click('#coord-apply');
+    await popup.waitForTimeout(300);
+
     // 2. Load the stand-in redBus page and let the interceptor work.
     var page = await context.newPage();
     var pageErrors = [];
     page.on('pageerror', function (e) { pageErrors.push(String(e)); });
-    await page.goto('http://www.redbus.in/', { waitUntil: 'networkidle' });
+    var SRP = 'http://www.redbus.in/bus-tickets/bangalore-to-hyderabad?onward=15-Aug-2026';
+    await page.goto(SRP, { waitUntil: 'networkidle' });
 
     await page.waitForSelector('#rbpp-panel', { timeout: 15000 });
     check('panel injects on redbus.in', true);
@@ -194,6 +238,33 @@ function check(name, cond, detail) {
     // 3. The interceptor must leave page behaviour untouched.
     var pageOk = await page.textContent('#out');
     check('patched fetch still resolves for the page', pageOk === 'fetch ok', 'got: ' + pageOk);
+
+    // 4. Regression: switching redBus's own tabs used to wipe every point,
+    //    because the route key was pathname+query and the tab lives in the query.
+    async function boardingCount() {
+      return page.evaluate(function () {
+        var ul = document.querySelector('#rbpp-panel .rbpp-list');
+        return ul ? ul.children.length : 0;
+      });
+    }
+
+    var before = await boardingCount();
+    await page.evaluate(function () {
+      history.pushState({}, '', location.pathname + location.search + '&tab=boardingDropping');
+    });
+    await page.waitForTimeout(2000); // the journey check runs on a 1s interval
+    var afterTab = await boardingCount();
+    check('points survive a tab switch', afterTab === before && before > 0,
+      'before=' + before + ' after=' + afterTab);
+
+    // A genuinely different search must still clear them.
+    await page.evaluate(function () {
+      history.pushState({}, '', '/bus-tickets/pune-to-goa?onward=15-Aug-2026');
+    });
+    await page.waitForTimeout(2000);
+    var afterNewSearch = await boardingCount();
+    check('a different city pair does clear points', afterNewSearch === 0,
+      'got ' + afterNewSearch + ' rows');
 
     console.log('\n' + (failures ? failures + ' failed' : 'all smoke checks passed'));
   } catch (e) {

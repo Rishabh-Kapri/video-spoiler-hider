@@ -66,6 +66,28 @@ Once you've done a recon export and know the real shape, tighten this — but
 keep the fallback. The heuristic is what makes a schema change degrade instead
 of fail.
 
+## Journey identity
+
+Captured points accumulate across many responses, so the question "is this
+still the same search?" decides when to throw them away. Getting it wrong is
+expensive in both directions: too eager and you lose everything mid-session,
+too lax and you rank Bengaluru stops against a Pune pin.
+
+The first attempt keyed on `pathname + search`, which was too eager —
+redBus's own tab switches (Select Seats → Board/Drop point) live in the query
+string, so opening the boarding-points tab wiped every point just as the user
+reached the screen they wanted them on.
+
+`core/journey.js` keys on the journey instead: the city pair from the path plus
+any date-like query parameter. Tabs, filters, sort orders, tracking params and
+hashes are all noise. Two further rules matter:
+
+- **A URL with no city pair is a sub-page, not a new search.** Moving to or
+  from one never clears points, so checkout and detail views are safe.
+- **Points are cached per journey in `storage.local`** with a 6-hour TTL, so
+  even a full page load rehydrates instead of starting empty. `raw` is stripped
+  before persisting — it holds the entire original object per point.
+
 ## Deduplication
 
 Stop identity is the **name**; the coordinate is an attribute of it. Keying on
@@ -91,7 +113,11 @@ route+date.
 and `world: "MAIN"` on Android). Expect the mobile web DOM to differ from
 desktop; forcing "Desktop site" avoids supporting two surfaces.
 
-**Phase 4 — geocoding, only if recon says it's needed.** The ladder, in order:
+**Phase 4 — geocoding. Largely obviated.** Live use confirmed redBus returns
+coordinates on its boarding and dropping points, so the fallback ladder isn't
+needed for the common case. It stays relevant only if some operators turn out
+to omit coordinates; the panel already reports that split (`resolvedCount` vs
+`totalCount`) rather than silently showing blanks. If it ever is needed:
 
 1. coordinate from the payload
 2. cached gazetteer (`normalized name → coords`)
@@ -100,11 +126,14 @@ desktop; forcing "Desktop site" avoids supporting two surfaces.
 
 Step 3 looks impossible (100 buses × 10 points = 1000 lookups) and isn't:
 distinct names per city are more like 50–100 because operators share landmarks.
-Dedupe first, cache permanently, and the tool gets faster with use. Note that
-Nominatim's usage policy forbids bulk automated querying — that path needs a
-real User-Agent, hard throttling, and probably a bundled seed gazetteer for
-your regular cities. A background service worker is the right home for that
-queue; there is deliberately none yet.
+Dedupe first, cache permanently, and the tool gets faster with use.
+
+Note the asymmetry with the pin search already shipped in `core/geocode.js`:
+that is *interactive*, one query per typed phrase, which Nominatim's usage
+policy explicitly allows. Bulk geocoding of point lists is the thing it
+forbids, and would need hard throttling plus a bundled seed gazetteer. A
+background service worker would be the right home for that queue; there is
+deliberately none yet.
 
 ## Testing
 

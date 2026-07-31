@@ -10,7 +10,10 @@
     "128": "icons/icon-128.png"
   },
   "permissions": ["storage"],
-  "host_permissions": ["*://*.redbus.in/*"],
+  "host_permissions": [
+    "*://*.redbus.in/*",
+    "https://nominatim.openstreetmap.org/*"
+  ],
   "browser_specific_settings": {
     "gecko": {
       "id": "redbus-point-picker@local",
@@ -39,6 +42,7 @@
       "matches": ["*://*.redbus.in/*"],
       "js": [
         "src/core/geo.js",
+        "src/core/journey.js",
         "src/core/adapter.js",
         "src/core/ranking.js",
         "src/shell/storage.js",

@@ -22,23 +22,23 @@
     points: [],
     seen: Object.create(null),
     pins: { origin: null, destination: null },
-    settings: { captureMode: false, panelOpen: true },
+    settings: { captureMode: false, panelOpen: true, debug: false },
     payloadsSeen: 0,
     payloadsMatched: 0,
     lastDiscoveries: [],
-    routeKey: routeKey()
+    journeyKey: RB.journey.journeyKey(location.href)
   };
 
   var els = null;
   var renderQueued = false;
+  var persistQueued = false;
 
-  function routeKey() {
+  function debug() {
+    if (!state.settings.debug) return;
+    var args = ['[rbpp]'].concat(Array.prototype.slice.call(arguments));
     try {
-      var u = new URL(location.href);
-      return u.pathname + (u.search || '');
-    } catch (e) {
-      return location.href;
-    }
+      console.log.apply(console, args);
+    } catch (e) {}
   }
 
   // --- payload handling ------------------------------------------------------
@@ -50,6 +50,7 @@
     try {
       json = JSON.parse(msg.body);
     } catch (e) {
+      debug('unparseable body from', msg.url);
       return;
     }
 
@@ -59,8 +60,12 @@
     try {
       res = adapter.extractPoints(json);
     } catch (e) {
+      debug('adapter threw on', msg.url, e);
       return;
     }
+
+    debug('payload', msg.url, '->', res.points.length, 'points',
+      '(' + res.withCoords + ' with coords)');
 
     if (res.discoveries && res.discoveries.length) {
       state.lastDiscoveries = res.discoveries.slice(0, 10);
@@ -96,23 +101,52 @@
   }
 
   function mergePoints(points) {
+    var added = 0;
     for (var i = 0; i < points.length; i++) {
-      if (state.points.length >= MAX_POINTS) return;
+      if (state.points.length >= MAX_POINTS) break;
       var p = points[i];
       var key = p.kind + '|' + (p.name || '') + '|' + (p.coord ? p.coord.lat + ',' + p.coord.lng : p.path);
       if (state.seen[key]) continue;
       state.seen[key] = true;
       state.points.push(p);
+      added++;
     }
+    if (added) schedulePersist();
+    return added;
   }
 
-  function resetForNewRoute() {
+  /** Cache to storage so an in-page navigation doesn't lose what we captured. */
+  function schedulePersist() {
+    if (persistQueued) return;
+    persistQueued = true;
+    setTimeout(function () {
+      persistQueued = false;
+      storage.setCachedPoints(state.journeyKey, state.points).then(function () {
+        debug('persisted', state.points.length, 'points for', state.journeyKey);
+      });
+    }, 1000);
+  }
+
+  function resetForNewJourney(nextKey) {
+    debug('journey changed', state.journeyKey, '->', nextKey, '- clearing points');
     state.points = [];
     state.seen = Object.create(null);
     state.payloadsSeen = 0;
     state.payloadsMatched = 0;
-    state.routeKey = routeKey();
+    state.journeyKey = nextKey;
+    rehydrate();
     scheduleRender();
+  }
+
+  /** Pull previously captured points for this journey back into memory. */
+  function rehydrate() {
+    var key = state.journeyKey;
+    return storage.getCachedPoints(key).then(function (cached) {
+      if (key !== state.journeyKey || !cached.length) return;
+      var restored = mergePoints(cached);
+      debug('rehydrated', restored, 'points for', key);
+      if (restored) scheduleRender();
+    });
   }
 
   // --- rendering -------------------------------------------------------------
@@ -325,8 +359,17 @@
   });
 
   // redBus is a SPA; a new search replaces the results without a page load.
+  // Keyed on the journey, not the raw URL — switching to the Board/Drop point
+  // tab changes the URL but is emphatically not a new search.
+  var lastHref = location.href;
   setInterval(function () {
-    if (routeKey() !== state.routeKey) resetForNewRoute();
+    var href = location.href;
+    if (href === lastHref) return;
+    var prev = lastHref;
+    lastHref = href;
+    if (RB.journey.isNewJourney(prev, href)) {
+      resetForNewJourney(RB.journey.journeyKey(href));
+    }
   }, 1000);
 
   var api = globalThis.browser || globalThis.chrome;
@@ -348,7 +391,9 @@
     Promise.all([storage.getPins(), storage.getSettings()]).then(function (vals) {
       state.pins = vals[0] || { origin: null, destination: null };
       state.settings = vals[1] || state.settings;
+      debug('started on', state.journeyKey);
       render();
+      return rehydrate();
     });
   }
 
